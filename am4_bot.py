@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -49,6 +50,8 @@ DEFAULT_FUEL_THRESHOLD = int(os.getenv("AM4_FUEL_THRESHOLD", "550"))
 DEFAULT_CO2_THRESHOLD = int(os.getenv("AM4_CO2_THRESHOLD", "125"))
 DEFAULT_EMAIL = os.getenv("AM4_EMAIL", "")
 DEFAULT_PASSWORD = os.getenv("AM4_PASSWORD", "")
+DEFAULT_CHROMIUM_PATH = os.getenv("AM4_CHROMIUM_PATH")
+DEFAULT_CHROMEDRIVER_PATH = os.getenv("AM4_CHROMEDRIVER_PATH")
 DEFAULT_DEPART_CHECK_INTERVAL_MINUTES = float(
     os.getenv("AM4_DEPART_CHECK_INTERVAL_MINUTES", "5")
 )
@@ -88,6 +91,8 @@ class AM4Bot:
         email: str = DEFAULT_EMAIL,
         password: str = DEFAULT_PASSWORD,
         headless: bool = False,
+        chromium_path: Optional[str] = DEFAULT_CHROMIUM_PATH,
+        chromedriver_path: Optional[str] = DEFAULT_CHROMEDRIVER_PATH,
         depart_check_interval_minutes: float = DEFAULT_DEPART_CHECK_INTERVAL_MINUTES,
         fuel_check_interval_minutes: float = DEFAULT_FUEL_CHECK_INTERVAL_MINUTES,
         depart_check_interval_range_seconds: Optional[str] = DEFAULT_DEPART_CHECK_INTERVAL_RANGE_SECONDS,
@@ -103,6 +108,8 @@ class AM4Bot:
         self.email = email.strip()
         self.password = password
         self.headless = headless
+        self.chromium_path = chromium_path
+        self.chromedriver_path = chromedriver_path
         self.depart_check_interval_seconds = max(
             30, int(depart_check_interval_minutes * 60)
         )
@@ -237,7 +244,16 @@ class AM4Bot:
             chrome_options.add_argument("--disable-dev-shm-usage")
             chrome_options.add_argument("--window-size=430,900")
             chrome_options.add_argument("--user-agent=Mozilla/5.0")
-            self.driver = webdriver.Chrome(options=chrome_options)
+            if self.chromium_path:
+                chrome_options.binary_location = self.chromium_path
+                log(f"Using Chromium binary: {self.chromium_path}")
+            if self.chromedriver_path:
+                service = Service(executable_path=self.chromedriver_path)
+                self.driver = webdriver.Chrome(
+                    service=service, options=chrome_options
+                )
+            else:
+                self.driver = webdriver.Chrome(options=chrome_options)
             log("Browser driver initialized successfully.")
         except Exception as exc:
             log(
@@ -730,6 +746,16 @@ def parse_args() -> argparse.Namespace:
         help="Run the browser in headless mode when available.",
     )
     parser.add_argument(
+        "--chromium-path",
+        default=DEFAULT_CHROMIUM_PATH,
+        help="Path to the Chromium/Chrome binary to use for Selenium.",
+    )
+    parser.add_argument(
+        "--chromedriver-path",
+        default=DEFAULT_CHROMEDRIVER_PATH,
+        help="Path to the ChromeDriver executable to use for Selenium.",
+    )
+    parser.add_argument(
         "--depart-check-interval-minutes",
         type=float,
         default=DEFAULT_DEPART_CHECK_INTERVAL_MINUTES,
@@ -872,6 +898,8 @@ def main() -> int:
         email=args.email,
         password=args.password,
         headless=args.headless,
+        chromium_path=args.chromium_path,
+        chromedriver_path=args.chromedriver_path,
         depart_check_interval_minutes=args.depart_check_interval_minutes,
         fuel_check_interval_minutes=args.fuel_check_interval_minutes,
         depart_check_interval_range_seconds=args.depart_check_interval_range_seconds,
