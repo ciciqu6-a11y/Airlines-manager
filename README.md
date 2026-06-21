@@ -35,6 +35,10 @@ You can set the values either in the environment or via command-line flags:
 - `AM4_PASSWORD` (optional password for automatic login)
 - `AM4_FUEL_THRESHOLD` (default: `550`)
 - `AM4_CO2_THRESHOLD` (default: `125`)
+- `AM4_DEPART_CHECK_INTERVAL_MINUTES` (default: `5`)
+- `AM4_FUEL_CHECK_INTERVAL_MINUTES` (default: `1`)
+- `AM4_DEPART_CHECK_INTERVAL_MIN_SECONDS` / `AM4_DEPART_CHECK_INTERVAL_MAX_SECONDS` (optional random depart range in seconds)
+- `AM4_FUEL_CHECK_INTERVAL_MIN_SECONDS` / `AM4_FUEL_CHECK_INTERVAL_MAX_SECONDS` (optional random fuel range in seconds)
 
 Example:
 
@@ -44,6 +48,12 @@ export AM4_EMAIL="your-email@example.com"
 export AM4_PASSWORD="your-password"
 export AM4_FUEL_THRESHOLD=550
 export AM4_CO2_THRESHOLD=125
+export AM4_DEPART_CHECK_INTERVAL_MINUTES=5
+export AM4_FUEL_CHECK_INTERVAL_MINUTES=1
+export AM4_DEPART_CHECK_INTERVAL_MIN_SECONDS=1000
+export AM4_DEPART_CHECK_INTERVAL_MAX_SECONDS=5000
+export AM4_FUEL_CHECK_INTERVAL_MIN_SECONDS=600
+export AM4_FUEL_CHECK_INTERVAL_MAX_SECONDS=1800
 ```
 
 ## Running the bot
@@ -58,6 +68,34 @@ Run continuously:
 
 ```bash
 python am4_bot.py
+```
+
+You can override the loop intervals if you want faster or slower checks:
+
+```bash
+python am4_bot.py --depart-check-interval-minutes 3 --fuel-check-interval-minutes 0.5
+```
+
+If you want the bot to pick a random delay inside a range for each check, set the values once in `.env` or use the interactive helper:
+
+```bash
+python am4_bot.py --configure-intervals
+```
+
+This will ask for four values:
+- depart min (seconds)
+- depart max (seconds)
+- fuel min (seconds)
+- fuel max (seconds)
+
+You can also pass them directly on the command line:
+
+```bash
+python am4_bot.py \
+  --depart-check-interval-min-seconds 1000 \
+  --depart-check-interval-max-seconds 5000 \
+  --fuel-check-interval-min-seconds 600 \
+  --fuel-check-interval-max-seconds 1800
 ```
 
 Run in headless mode if your browser setup supports it:
