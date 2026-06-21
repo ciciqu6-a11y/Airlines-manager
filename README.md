@@ -9,6 +9,13 @@ This repository contains a Python version of the AM4 automation logic from the T
 - Checks whether flights are ready to depart.
 - Buys fuel and CO2 when the price is at or below the configured thresholds.
 
+## Clone the repository
+
+```bash
+git clone https://github.com/elssword4587/Airlines-manager
+cd Airlines-manager
+```
+
 ## Termux setup
 
 Install the required packages:
@@ -19,12 +26,16 @@ pkg install python git clang
 pkg install chromium chromium-driver
 ```
 
+If your Termux build does not provide a usable Chromium binary, you can also try a proot/Ubuntu-based setup and install Chromium there instead.
+
 Then install Python dependencies:
 
 ```bash
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+If Chromium is still not working, the bot can still perform HTTP-based checks such as login, bank balance, and fuel page parsing, but browser-dependent actions may be limited.
 
 ## Configuration
 
@@ -76,6 +87,12 @@ You can override the loop intervals if you want faster or slower checks:
 python am4_bot.py --depart-check-interval-minutes 3 --fuel-check-interval-minutes 0.5
 ```
 
+If you want the bot to keep using the saved `.env` range settings, you can run:
+
+```bash
+python am4_bot.py --change-interval
+```
+
 If you want the bot to pick a random delay inside a range for each check, set the values once in `.env` or use the interactive helper:
 
 ```bash
@@ -108,6 +125,7 @@ python am4_bot.py --headless
 
 - The website structure may change, so some selectors may need adjustment.
 - You should log in to the game once first and keep the session active.
+- Browser-dependent actions require a working Chromium/Chrome runtime.
 - This script is a Python translation of the original logic; it is not a literal browser extension port.
 
 ## Files
