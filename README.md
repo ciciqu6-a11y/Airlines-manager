@@ -33,6 +33,14 @@ pkg install -y python git clang
 pkg install -y chromium chromium-driver
 ```
 
+Alternatively, if you prefer Firefox:
+
+```bash
+pkg update && pkg upgrade -y
+pkg install -y python git clang
+pkg install -y firefox geckodriver
+```
+
 Then install Python dependencies:
 
 ```bash
@@ -45,6 +53,12 @@ If you want Playwright support too:
 ```bash
 python -m pip install -r requirements.txt
 python -m playwright install chromium
+```
+
+If using Firefox, run the bot with:
+
+```bash
+python am4_bot.py --browser firefox --once
 ```
 
 ### Option B: Termux + Ubuntu via proot-distro
@@ -194,7 +208,21 @@ Run in headless mode if your browser setup supports it:
 python am4_bot.py --headless
 ```
 
-Modes
+### Browser choice
+
+By default, the bot uses Chromium for Selenium. If Chromium is unavailable or you prefer Firefox, use the `--browser` option:
+
+```bash
+python am4_bot.py --browser firefox --once
+```
+
+Supported browsers:
+- `chromium` (default): uses Chromium/Chrome
+- `firefox`: uses Mozilla Firefox
+
+This is useful when Chromium is not available but Firefox is installed on your system.
+
+### Modes
  - `auto`: try Selenium, then Playwright, then Pyppeteer, then fall back to HTTP-only.
  - `selenium`: force Selenium-only (will not try Playwright/Pyppeteer).
  - `playwright`: force Playwright for browser automation.

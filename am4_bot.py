@@ -21,6 +21,8 @@ from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
+from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -107,6 +109,7 @@ class AM4Bot:
         fuel_check_interval_min_seconds: Optional[int] = None,
         fuel_check_interval_max_seconds: Optional[int] = None,
         mode: str = "auto",
+        browser: str = "chromium",
     ):
         self.base_url = base_url.rstrip("/")
         self.fuel_threshold = fuel_threshold
@@ -116,6 +119,7 @@ class AM4Bot:
         self.headless = headless
         self.chromium_path = chromium_path
         self.chromedriver_path = chromedriver_path
+        self.browser = browser.lower()
         self.depart_check_interval_seconds = max(
             30, int(depart_check_interval_minutes * 60)
         )
@@ -281,26 +285,35 @@ class AM4Bot:
                 return
 
         try:
-            chrome_options = Options()
-            if self.headless:
-                chrome_options.add_argument("--headless")
-            chrome_options.add_argument("--no-sandbox")
-            chrome_options.add_argument("--disable-dev-shm-usage")
-            chrome_options.add_argument("--disable-gpu")
-            chrome_options.add_argument("--disable-software-rasterizer")
-            chrome_options.add_argument("--window-size=430,900")
-            chrome_options.add_argument("--user-agent=Mozilla/5.0")
-            if self.chromium_path:
-                chrome_options.binary_location = self.chromium_path
-                log(f"Using Chromium binary: {self.chromium_path}")
-            if self.chromedriver_path:
-                service = Service(executable_path=self.chromedriver_path)
-                self.driver = webdriver.Chrome(
-                    service=service, options=chrome_options
-                )
+            if self.browser == "firefox":
+                firefox_options = FirefoxOptions()
+                if self.headless:
+                    firefox_options.add_argument("--headless")
+                firefox_options.add_argument("--width=430")
+                firefox_options.add_argument("--height=900")
+                self.driver = webdriver.Firefox(options=firefox_options)
+                log("Firefox driver initialized successfully.")
             else:
-                self.driver = webdriver.Chrome(options=chrome_options)
-            log("Browser driver initialized successfully.")
+                chrome_options = Options()
+                if self.headless:
+                    chrome_options.add_argument("--headless")
+                chrome_options.add_argument("--no-sandbox")
+                chrome_options.add_argument("--disable-dev-shm-usage")
+                chrome_options.add_argument("--disable-gpu")
+                chrome_options.add_argument("--disable-software-rasterizer")
+                chrome_options.add_argument("--window-size=430,900")
+                chrome_options.add_argument("--user-agent=Mozilla/5.0")
+                if self.chromium_path:
+                    chrome_options.binary_location = self.chromium_path
+                    log(f"Using Chromium binary: {self.chromium_path}")
+                if self.chromedriver_path:
+                    service = Service(executable_path=self.chromedriver_path)
+                    self.driver = webdriver.Chrome(
+                        service=service, options=chrome_options
+                    )
+                else:
+                    self.driver = webdriver.Chrome(options=chrome_options)
+                log("Chromium driver initialized successfully.")
         except Exception as exc:
             log(
                 f"Browser driver could not be started: {exc}. "
@@ -1264,6 +1277,12 @@ def parse_args() -> argparse.Namespace:
         default="auto",
         help="Automation mode: auto/selenium/pyppeteer/playwright/http (http forces requests-only).",
     )
+    parser.add_argument(
+        "--browser",
+        choices=("chromium", "firefox"),
+        default="chromium",
+        help="Browser choice for Selenium: chromium or firefox.",
+    )
     return parser.parse_args()
 
 
@@ -1353,6 +1372,7 @@ def main() -> int:
         fuel_check_interval_min_seconds=args.fuel_check_interval_min_seconds,
         fuel_check_interval_max_seconds=args.fuel_check_interval_max_seconds,
         mode=args.mode,
+        browser=args.browser,
     )
 
     try:
