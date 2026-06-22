@@ -266,9 +266,13 @@ class AM4Bot:
             try:
                 from playwright.sync_api import sync_playwright  # type: ignore
 
-                log("Attempting to launch Playwright Chromium (headless).")
+                browser_name = "Firefox" if self.browser == "firefox" else "Chromium"
+                log(f"Attempting to launch Playwright {browser_name} (headless).")
                 p = sync_playwright().start()
-                browser = p.chromium.launch(headless=self.headless, args=["--no-sandbox","--disable-dev-shm-usage","--window-size=430,900"]) 
+                if self.browser == "firefox":
+                    browser = p.firefox.launch(headless=self.headless, args=["--no-sandbox","--disable-dev-shm-usage"])
+                else:
+                    browser = p.chromium.launch(headless=self.headless, args=["--no-sandbox","--disable-dev-shm-usage","--window-size=430,900"])
                 ua = self.session.headers.get("User-Agent")
                 context = browser.new_context(user_agent=ua)
                 page = context.new_page()
@@ -276,7 +280,7 @@ class AM4Bot:
                 self.playwright_browser = browser
                 self.playwright_context = context
                 self.playwright_page = page
-                log("Playwright Chromium launched and ready.")
+                log(f"Playwright {browser_name} launched and ready.")
                 return
             except Exception as pw_exc:
                 log(f"Playwright launch failed: {pw_exc}")
@@ -338,9 +342,13 @@ class AM4Bot:
             try:
                 from playwright.sync_api import sync_playwright  # type: ignore
 
-                log("Attempting to launch Playwright Chromium (headless) as fallback.")
+                browser_name = "Firefox" if self.browser == "firefox" else "Chromium"
+                log(f"Attempting to launch Playwright {browser_name} (headless) as fallback.")
                 p = sync_playwright().start()
-                browser = p.chromium.launch(headless=self.headless, args=["--no-sandbox","--disable-dev-shm-usage","--window-size=430,900"]) 
+                if self.browser == "firefox":
+                    browser = p.firefox.launch(headless=self.headless, args=["--no-sandbox","--disable-dev-shm-usage"])
+                else:
+                    browser = p.chromium.launch(headless=self.headless, args=["--no-sandbox","--disable-dev-shm-usage","--window-size=430,900"])
                 ua = self.session.headers.get("User-Agent")
                 context = browser.new_context(user_agent=ua)
                 page = context.new_page()
@@ -348,7 +356,7 @@ class AM4Bot:
                 self.playwright_browser = browser
                 self.playwright_context = context
                 self.playwright_page = page
-                log("Playwright Chromium launched and ready (fallback).")
+                log(f"Playwright {browser_name} launched and ready (fallback).")
             except Exception:
                 # Attempt pyppeteer fallback when Selenium/Chromium and Playwright can't start.
                 try:
