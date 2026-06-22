@@ -280,7 +280,10 @@ class AM4Bot:
                 self.playwright_browser = browser
                 self.playwright_context = context
                 self.playwright_page = page
-                log(f"Playwright {browser_name} launched and ready.")
+                log(
+                    f"Playwright {browser_name} launched and ready "
+                    f"(mode={self.mode}, browser={self.browser})."
+                )
                 return
             except Exception as pw_exc:
                 log(f"Playwright launch failed: {pw_exc}")
@@ -462,6 +465,7 @@ class AM4Bot:
                         "value": cookie.value,
                         "domain": domain,
                         "path": cookie.path or "/",
+                        "url": self.base_url,
                     }
                 )
             if cookies:
@@ -660,6 +664,16 @@ class AM4Bot:
                 departure_count = "not found"
             except Exception as exc:
                 departure_count = f"error: {exc}"
+        elif self.playwright_page is not None:
+            try:
+                self.playwright_page.goto(self.base_url)
+                self.playwright_page.wait_for_selector("#listDepartAmount", timeout=10000)
+                departure_count = self.playwright_page.evaluate(
+                    "() => { const el = document.getElementById('listDepartAmount'); return el ? el.textContent.trim() : null; }"
+                )
+                departure_count = departure_count if departure_count else "not found"
+            except Exception as exc:
+                departure_count = f"error: {exc}"
         else:
             # If mode=http, attempt to get departure info via HTTP
             if self.mode == "http":
@@ -751,9 +765,14 @@ class AM4Bot:
             return 0, "unknown"
 
     def check_departures(self) -> None:
-        if self.driver is not None:
+        if self.driver is not None or self.playwright_page is not None or self.pyppeteer_page is not None:
             self.depart_all()
             return
+
+        if self.mode != "http":
+            log(
+                "Browser automation is unavailable; falling back to HTTP departure endpoints."
+            )
 
         airc_total, depart_text = self.get_departure_summary()
         if airc_total <= 0 and depart_text in ("unknown", "all"):
@@ -856,7 +875,17 @@ class AM4Bot:
                 log(f"Could not find auto-price button via pyppeteer: {exc}")
 
     def depart_all(self) -> None:
-        # Try Selenium first, then pyppeteer fallback for clicking the departure UI
+        browser_path = (
+            "selenium" if self.driver is not None else
+            "playwright" if self.playwright_page is not None else
+            "pyppeteer" if self.pyppeteer_page is not None else
+            "none"
+        )
+        log(
+            f"Attempting departure checks using {browser_path} "
+            f"(mode={self.mode}, browser={self.browser})."
+        )
+
         if self.driver is not None:
             try:
                 count = self.driver.find_element(By.ID, "listDepartAmount")
@@ -876,6 +905,37 @@ class AM4Bot:
                 return
             except NoSuchElementException:
                 log("Could not find departure elements (selenium).")
+
+        if self.playwright_page is not None:
+            try:
+                page = self.playwright_page
+                page.goto(self.base_url)
+                page.wait_for_selector("#listDepartAmount", timeout=15000)
+                flight_count = page.evaluate(
+                    "() => { const el = document.getElementById('listDepartAmount'); return el ? el.textContent.trim() : null; }"
+                )
+                if flight_count is None:
+                    log("Could not find departure elements (playwright).")
+                    return
+                log(
+                    f"Departure panel shows {flight_count} flight(s) ready to depart."
+                )
+                if flight_count != "0":
+                    self.start_eco_campaign()
+                    time.sleep(1)
+                    page.evaluate(
+                        '''() => {
+                            const el = document.getElementById('listDepartAmount');
+                            if (!el) return false;
+                            const clickable = el.closest('a, button, [role=button]') || el.parentElement || el;
+                            clickable.click();
+                            return true;
+                        }'''
+                    )
+                    log(f"✅ Departure action triggered for {flight_count} flight(s) (playwright).")
+            except Exception as exc:
+                log(f"Departure via playwright failed: {exc}")
+            return
 
         if self.pyppeteer_page is not None and self.pyppeteer_loop is not None:
             try:
@@ -899,7 +959,13 @@ class AM4Bot:
                     # Click the parent element to trigger departure
                     loop.run_until_complete(
                         self.pyppeteer_page.evaluate(
-                            "() => { const el = document.getElementById('listDepartAmount'); if (el && el.parentElement) el.parentElement.click(); }"
+                            '''() => {
+                                const el = document.getElementById('listDepartAmount');
+                                if (!el) return false;
+                                const clickable = el.closest('a, button, [role=button]') || el.parentElement || el;
+                                clickable.click();
+                                return true;
+                            }'''
                         )
                     )
                     log(f"✅ Departure action triggered for {flight_count} flight(s) (pyppeteer).")
